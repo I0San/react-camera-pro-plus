@@ -1,14 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
-import styled from 'styled-components';
+import React, { useEffect, useRef, useState } from 'react'
+import styled from 'styled-components'
 
-import { Camera, CameraType } from './Camera';
+import { Camera } from './Camera'
+import { CameraRef } from './Camera/components/Camera/types'
 
 const Wrapper = styled.div`
   position: fixed;
   width: 100%;
   height: 100%;
   z-index: 1;
-`;
+`
 
 const Control = styled.div`
   position: fixed;
@@ -37,7 +38,7 @@ const Control = styled.div`
   @media (max-width: 400px) {
     padding: 10px;
   }
-`;
+`
 
 const Button = styled.button`
   outline: none;
@@ -62,7 +63,7 @@ const Button = styled.button`
   &:hover {
     opacity: 0.7;
   }
-`;
+`
 
 const TakePhotoButton = styled(Button)`
   background: url('https://img.icons8.com/ios/50/000000/compact-camera.png');
@@ -77,7 +78,24 @@ const TakePhotoButton = styled(Button)`
   &:hover {
     background-color: rgba(0, 0, 0, 0.3);
   }
-`;
+`
+
+const RecordVideoButton = styled(Button)<{ isRecording: boolean }>`
+  background: url('https://img.icons8.com/ios/50/000000/record.png');
+  background-position: center;
+  background-size: 50px;
+  background-repeat: no-repeat;
+  width: 80px;
+  height: 80px;
+  border: solid 4px black;
+  border-radius: 50%;
+  ${({ isRecording }) => (isRecording ? `background-color: green;` : 'unset')}
+  animation: pulsate 1.5s ease-in-out infinite;
+
+  &:hover {
+    ${({ isRecording }) => (!isRecording ? `background-color: rgba(0, 0, 0, 0.3);` : 'unset')}
+  }
+`
 
 const TorchButton = styled(Button)`
   background: url('https://img.icons8.com/ios/50/000000/light.png');
@@ -92,7 +110,7 @@ const TorchButton = styled(Button)`
   &.toggled {
     background-color: rgba(0, 0, 0, 0.3);
   }
-`;
+`
 
 const ChangeFacingCameraButton = styled(Button)`
   background: url(https://img.icons8.com/ios/50/000000/switch-camera.png);
@@ -113,7 +131,7 @@ const ChangeFacingCameraButton = styled(Button)`
       padding: 40px 25px;
     }
   }
-`;
+`
 
 const ImagePreview = styled.div<{ image: string | null }>`
   width: 120px;
@@ -127,7 +145,7 @@ const ImagePreview = styled.div<{ image: string | null }>`
     width: 50px;
     height: 120px;
   }
-`;
+`
 
 const FullScreenImagePreview = styled.div<{ image: string | null }>`
   width: 100%;
@@ -139,24 +157,24 @@ const FullScreenImagePreview = styled.div<{ image: string | null }>`
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-`;
+`
 
 const App = () => {
-  const [numberOfCameras, setNumberOfCameras] = useState(0);
-  const [image, setImage] = useState<string | null>(null);
-  const [showImage, setShowImage] = useState<boolean>(false);
-  const camera = useRef<CameraType>(null);
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [activeDeviceId, setActiveDeviceId] = useState<string | undefined>(undefined);
-  const [torchToggled, setTorchToggled] = useState<boolean>(false);
+  const [numberOfCameras, setNumberOfCameras] = useState(0)
+  const [image, setImage] = useState<string | null>(null)
+  const [showImage, setShowImage] = useState<boolean>(false)
+  const camera = useRef<CameraRef>(null)
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
+  const [activeDeviceId, setActiveDeviceId] = useState<string | undefined>(undefined)
+  const [torchToggled, setTorchToggled] = useState<boolean>(false)
 
   useEffect(() => {
-    (async () => {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter((i) => i.kind == 'videoinput');
-      setDevices(videoDevices);
-    })();
-  });
+    ;(async () => {
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      const videoDevices = devices.filter((i) => i.kind == 'videoinput')
+      setDevices(videoDevices)
+    })()
+  })
 
   return (
     <Wrapper>
@@ -164,7 +182,7 @@ const App = () => {
         <FullScreenImagePreview
           image={image}
           onClick={() => {
-            setShowImage(!showImage);
+            setShowImage(!showImage)
           }}
         />
       ) : (
@@ -180,16 +198,17 @@ const App = () => {
             switchCamera:
               'It is not possible to switch camera to different one because there is only one video device accessible.',
             canvas: 'Canvas is not supported.',
+            mediaRecorderNotSupported: 'MediaRecorder is not supported.',
           }}
           videoReadyCallback={() => {
-            console.log('Video feed ready.');
+            console.log('Video feed ready.')
           }}
         />
       )}
       <Control>
         <select
           onChange={(event) => {
-            setActiveDeviceId(event.target.value);
+            setActiveDeviceId(event.target.value)
           }}
         >
           {devices.map((d) => (
@@ -201,15 +220,29 @@ const App = () => {
         <ImagePreview
           image={image}
           onClick={() => {
-            setShowImage(!showImage);
+            setShowImage(!showImage)
           }}
         />
         <TakePhotoButton
           onClick={() => {
             if (camera.current) {
-              const photo = camera.current.takePhoto();
-              console.log(photo);
-              setImage(photo as string);
+              const photo = camera.current.takePhoto()
+              console.log(photo)
+              setImage(photo as string)
+            }
+          }}
+        />
+        <RecordVideoButton
+          isRecording={camera.current?.isRecording() || false}
+          onClick={() => {
+            if (camera.current) {
+              if (camera.current.isRecording()) {
+                camera.current.stopRecording()
+                const resultingVideo = camera.current.getRecordedVideo()
+                console.log(resultingVideo)
+              } else {
+                camera.current.startRecording()
+              }
             }
           }}
         />
@@ -218,7 +251,7 @@ const App = () => {
             className={torchToggled ? 'toggled' : ''}
             onClick={() => {
               if (camera.current) {
-                setTorchToggled(camera.current.toggleTorch());
+                setTorchToggled(camera.current.toggleTorch())
               }
             }}
           />
@@ -227,14 +260,14 @@ const App = () => {
           disabled={numberOfCameras <= 1}
           onClick={() => {
             if (camera.current) {
-              const result = camera.current.switchCamera();
-              console.log(result);
+              const result = camera.current.switchCamera()
+              console.log(result)
             }
           }}
         />
       </Control>
     </Wrapper>
-  );
-};
+  )
+}
 
-export default App;
+export default App

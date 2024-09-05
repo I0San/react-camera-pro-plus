@@ -167,6 +167,8 @@ const App = () => {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
   const [activeDeviceId, setActiveDeviceId] = useState<string | undefined>(undefined)
   const [torchToggled, setTorchToggled] = useState<boolean>(false)
+  // const [recordedVideo, setRecordedVideo] = useState<Blob | null>(null)
+  const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -223,6 +225,12 @@ const App = () => {
             setShowImage(!showImage)
           }}
         />
+        {recordedVideoUrl && (
+          <video controls>
+            <source src={recordedVideoUrl} type="video/webm" />
+            Your browser does not support the video tag.
+          </video>
+        )}
         <TakePhotoButton
           onClick={() => {
             if (camera.current) {
@@ -237,9 +245,14 @@ const App = () => {
           onClick={() => {
             if (camera.current) {
               if (camera.current.isRecording()) {
-                camera.current.stopRecording()
-                const resultingVideo = camera.current.getRecordedVideo()
-                console.log(resultingVideo)
+                camera.current.stopRecording().then(() => {
+                  const resultingVideo = camera.current ? camera.current.getRecordedVideo() : null
+                  console.log(resultingVideo)
+                  if (resultingVideo) {
+                    console.log(resultingVideo)
+                    setRecordedVideoUrl(URL.createObjectURL(resultingVideo))
+                  }
+                })
               } else {
                 camera.current.startRecording()
               }

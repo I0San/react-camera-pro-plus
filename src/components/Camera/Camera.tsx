@@ -11,12 +11,6 @@ import {
 } from './types'
 import { Container, Wrapper, Canvas, Cam, ErrorMsg } from './styles'
 
-declare global {
-  interface Window {
-    MediaRecorder: typeof MediaRecorder
-  }
-}
-
 const CameraComponent: ForwardRefRenderFunction<CameraRef, CameraProps> = (
   {
     facingMode = 'user',
@@ -35,10 +29,12 @@ const CameraComponent: ForwardRefRenderFunction<CameraRef, CameraProps> = (
   },
   ref,
 ) => {
+  const mounted = useRef(false)
   const player = useRef<HTMLVideoElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const context = useRef<any | null>(null)
   const container = useRef<HTMLDivElement>(null)
+  const mediaRecorder = useRef<MediaRecorder | null>(null)
   const [numberOfCameras, setNumberOfCameras] = useState<number>(0)
   const [stream, setStream] = useState<Stream>(null)
   const [currentFacingMode, setFacingMode] = useState<FacingMode>(facingMode)
@@ -46,12 +42,8 @@ const CameraComponent: ForwardRefRenderFunction<CameraRef, CameraProps> = (
   const [permissionDenied, setPermissionDenied] = useState<boolean>(false)
   const [torchSupported, setTorchSupported] = useState<boolean>(false)
   const [torch, setTorch] = useState<boolean>(false)
-  const mounted = useRef(false)
-
-  // New state for video recording
   const [isRecording, setIsRecording] = useState<boolean>(false)
-  const mediaRecorder = useRef<MediaRecorder | null>(null)
-  const recordedChunks = useRef<Blob[]>([])
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([])
 
   useEffect(() => {
     mounted.current = true
@@ -160,35 +152,34 @@ const CameraComponent: ForwardRefRenderFunction<CameraRef, CameraProps> = (
     },
     torchSupported: torchSupported,
     startRecording: () => {
-      if (stream && !isRecording) {
-        if ('MediaRecorder' in window) {
-          recordedChunks.current = []
-          mediaRecorder.current = new MediaRecorder(stream)
-          mediaRecorder.current.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-              recordedChunks.current.push(event.data)
-            }
+      if ('MediaRecorder' in window && stream) {
+        setRecordedChunks([])
+        mediaRecorder.current = new MediaRecorder(stream)
+        mediaRecorder.current.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            setRecordedChunks((prevBlobs) => [...prevBlobs, event.data])
           }
-
-          mediaRecorder.current.start()
-          setIsRecording(true)
-        } else {
-          console.error(errorMessages.mediaRecorderNotSupported)
         }
+        mediaRecorder.current.start()
+        setIsRecording(true)
+      } else {
+        throw new Error(errorMessages.mediaRecorderNotSupported)
       }
     },
     stopRecording: () => {
-      if (mediaRecorder.current && isRecording) {
-        mediaRecorder.current.stop()
-        setIsRecording(false)
-      }
+      return new Promise((resolve) => {
+        if (mediaRecorder.current && isRecording) {
+          mediaRecorder.current.stop()
+          setIsRecording(false)
+          mediaRecorder.current.onstop = () => {
+            resolve()
+          }
+        }
+      })
     },
     getRecordedVideo: () => {
-      console.log('recordedChunks', recordedChunks.current)
-      console.log('recordedChunks.length', recordedChunks.current.length)
-      if (recordedChunks.current.length) {
-        const blob = new Blob(recordedChunks.current, { type: 'video/webm' })
-        return blob
+      if (recordedChunks.length > 0) {
+        return new Blob(recordedChunks, { type: 'video/webm' })
       }
       return null
     },

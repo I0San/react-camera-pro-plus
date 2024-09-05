@@ -54,6 +54,13 @@ function __generator(thisArg, body) {
     }
 }
 
+function __spreadArrays() {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+}
 function __makeTemplateObject(cooked, raw) {
     if (Object.defineProperty) { Object.defineProperty(cooked, "raw", { value: raw }); } else { cooked.raw = raw; }
     return cooked;
@@ -84,10 +91,12 @@ var CameraComponent = function (_a, ref) {
         canvas: 'Canvas is not supported.',
         mediaRecorderNotSupported: 'MediaRecorder is not supported in this browser.',
     } : _f, _g = _a.videoReadyCallback, videoReadyCallback = _g === void 0 ? function () { return null; } : _g;
+    var mounted = useRef(false);
     var player = useRef(null);
     var canvas = useRef(null);
     var context = useRef(null);
     var container = useRef(null);
+    var mediaRecorder = useRef(null);
     var _h = useState(0), numberOfCameras = _h[0], setNumberOfCameras = _h[1];
     var _j = useState(null), stream = _j[0], setStream = _j[1];
     var _k = useState(facingMode), currentFacingMode = _k[0], setFacingMode = _k[1];
@@ -95,11 +104,8 @@ var CameraComponent = function (_a, ref) {
     var _m = useState(false), permissionDenied = _m[0], setPermissionDenied = _m[1];
     var _o = useState(false), torchSupported = _o[0], setTorchSupported = _o[1];
     var _p = useState(false), torch = _p[0], setTorch = _p[1];
-    var mounted = useRef(false);
-    // New state for video recording
     var _q = useState(false), isRecording = _q[0], setIsRecording = _q[1];
-    var mediaRecorder = useRef(null);
-    var recordedChunks = useRef([]);
+    var _r = useState([]), recordedChunks = _r[0], setRecordedChunks = _r[1];
     useEffect(function () {
         mounted.current = true;
         return function () {
@@ -207,35 +213,35 @@ var CameraComponent = function (_a, ref) {
         },
         torchSupported: torchSupported,
         startRecording: function () {
-            if (stream && !isRecording) {
-                if ('MediaRecorder' in window) {
-                    recordedChunks.current = [];
-                    mediaRecorder.current = new MediaRecorder(stream);
-                    mediaRecorder.current.ondataavailable = function (event) {
-                        if (event.data.size > 0) {
-                            recordedChunks.current.push(event.data);
-                        }
-                    };
-                    mediaRecorder.current.start();
-                    setIsRecording(true);
-                }
-                else {
-                    console.error(errorMessages.mediaRecorderNotSupported);
-                }
+            if ('MediaRecorder' in window && stream) {
+                setRecordedChunks([]);
+                mediaRecorder.current = new MediaRecorder(stream);
+                mediaRecorder.current.ondataavailable = function (event) {
+                    if (event.data && event.data.size > 0) {
+                        setRecordedChunks(function (prevBlobs) { return __spreadArrays(prevBlobs, [event.data]); });
+                    }
+                };
+                mediaRecorder.current.start();
+                setIsRecording(true);
+            }
+            else {
+                throw new Error(errorMessages.mediaRecorderNotSupported);
             }
         },
         stopRecording: function () {
-            if (mediaRecorder.current && isRecording) {
-                mediaRecorder.current.stop();
-                setIsRecording(false);
-            }
+            return new Promise(function (resolve) {
+                if (mediaRecorder.current && isRecording) {
+                    mediaRecorder.current.stop();
+                    setIsRecording(false);
+                    mediaRecorder.current.onstop = function () {
+                        resolve();
+                    };
+                }
+            });
         },
         getRecordedVideo: function () {
-            console.log('recordedChunks', recordedChunks.current);
-            console.log('recordedChunks.length', recordedChunks.current.length);
-            if (recordedChunks.current.length) {
-                var blob = new Blob(recordedChunks.current, { type: 'video/webm' });
-                return blob;
+            if (recordedChunks.length > 0) {
+                return new Blob(recordedChunks, { type: 'video/webm' });
             }
             return null;
         },

@@ -12,7 +12,7 @@ export interface CameraRef {
   toggleTorch: () => boolean
   torchSupported: boolean
   startRecording: () => void
-  stopRecording: () => void
+  stopRecording: () => Promise<void>
   getRecordedVideo: () => Blob | null
   isRecording: () => boolean
 }

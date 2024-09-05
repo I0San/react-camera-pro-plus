@@ -238,8 +238,8 @@ var CameraComponent = function (_a, ref) {
             return new Promise(function (resolve) {
                 if (mediaRecorder.current && isRecording) {
                     mediaRecorder.current.stop();
-                    setIsRecording(false);
                     mediaRecorder.current.onstop = function () {
+                        setIsRecording(false);
                         resolve();
                     };
                 }

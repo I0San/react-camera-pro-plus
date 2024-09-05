@@ -15,7 +15,7 @@ const Control = styled.div`
   position: fixed;
   display: flex;
   right: 0;
-  width: 20%;
+  width: 15%;
   min-width: 130px;
   min-height: 130px;
   height: 100%;
@@ -23,8 +23,9 @@ const Control = styled.div`
   z-index: 10;
   display: flex;
   align-items: center;
+  gap: 12px;
   justify-content: space-between;
-  padding: 50px;
+  padding: 24px;
   box-sizing: border-box;
   flex-direction: column-reverse;
 
@@ -32,11 +33,18 @@ const Control = styled.div`
     flex-direction: row;
     bottom: 0;
     width: 100%;
-    height: 20%;
+    height: 15%;
   }
 
-  @media (max-width: 400px) {
+  @media (max-width: 768px) {
     padding: 10px;
+  }
+}
+`
+
+const DeviceSelect = styled.select`
+  @media (max-width: 992px) {
+    display: none;
   }
 `
 
@@ -70,8 +78,10 @@ const TakePhotoButton = styled(Button)`
   background-position: center;
   background-size: 50px;
   background-repeat: no-repeat;
-  width: 80px;
-  height: 80px;
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  min-height: 60px;
   border: solid 4px black;
   border-radius: 50%;
 
@@ -85,8 +95,10 @@ const RecordVideoButton = styled(Button)<{ isRecording: boolean }>`
   background-position: center;
   background-size: 50px;
   background-repeat: no-repeat;
-  width: 80px;
-  height: 80px;
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  min-height: 60px;
   border: solid 4px black;
   border-radius: 50%;
   ${({ isRecording }) => (isRecording ? `background-color: green;` : 'unset')}
@@ -102,8 +114,8 @@ const TorchButton = styled(Button)`
   background-position: center;
   background-size: 50px;
   background-repeat: no-repeat;
-  width: 80px;
-  height: 80px;
+  width: 60px;
+  height: 60px;
   border: solid 4px black;
   border-radius: 50%;
 
@@ -147,6 +159,13 @@ const ImagePreview = styled.div<{ image: string | null }>`
   }
 `
 
+const VideoPreview = styled.video`
+  width: 120px;
+  @media (max-width: 400px) {
+    width: 50px;
+  }
+`
+
 const FullScreenImagePreview = styled.div<{ image: string | null }>`
   width: 100%;
   height: 100%;
@@ -159,10 +178,35 @@ const FullScreenImagePreview = styled.div<{ image: string | null }>`
   background-position: center;
 `
 
+const FullScreenVideoPreview = styled.video`
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  position: absolute;
+`
+
+const CloseIcon = styled.div`
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  background: gray;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`
+
 const App = () => {
   const [numberOfCameras, setNumberOfCameras] = useState(0)
   const [image, setImage] = useState<string | null>(null)
   const [showImage, setShowImage] = useState<boolean>(false)
+  const [showVideo, setShowVideo] = useState<boolean>(false)
   const camera = useRef<CameraRef>(null)
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
   const [activeDeviceId, setActiveDeviceId] = useState<string | undefined>(undefined)
@@ -176,7 +220,7 @@ const App = () => {
       const videoDevices = devices.filter((i) => i.kind == 'videoinput')
       setDevices(videoDevices)
     })()
-  })
+  }, [])
 
   return (
     <Wrapper>
@@ -187,98 +231,123 @@ const App = () => {
             setShowImage(!showImage)
           }}
         />
-      ) : (
-        <Camera
-          ref={camera}
-          aspectRatio="cover"
-          facingMode="environment"
-          numberOfCamerasCallback={(i) => setNumberOfCameras(i)}
-          videoSourceDeviceId={activeDeviceId}
-          errorMessages={{
-            noCameraAccessible: 'No camera device accessible. Please connect your camera or try a different browser.',
-            permissionDenied: 'Permission denied. Please refresh and give camera permission.',
-            switchCamera:
-              'It is not possible to switch camera to different one because there is only one video device accessible.',
-            canvas: 'Canvas is not supported.',
-            mediaRecorderNotSupported: 'MediaRecorder is not supported.',
-          }}
-          videoReadyCallback={() => {
-            console.log('Video feed ready.')
-          }}
-        />
-      )}
-      <Control>
-        <select
-          onChange={(event) => {
-            setActiveDeviceId(event.target.value)
-          }}
-        >
-          {devices.map((d) => (
-            <option key={d.deviceId} value={d.deviceId}>
-              {d.label}
-            </option>
-          ))}
-        </select>
-        <ImagePreview
-          image={image}
-          onClick={() => {
-            setShowImage(!showImage)
-          }}
-        />
-        {recordedVideoUrl && (
-          <video controls>
+      ) : showVideo && recordedVideoUrl ? (
+        <>
+          <CloseIcon
+            onClick={() => {
+              setShowVideo(!showVideo)
+            }}
+          >
+            X
+          </CloseIcon>
+          <FullScreenVideoPreview controls>
             <source src={recordedVideoUrl} type="video/webm" />
             Your browser does not support the video tag.
-          </video>
-        )}
-        <TakePhotoButton
-          onClick={() => {
-            if (camera.current) {
-              const photo = camera.current.takePhoto()
-              console.log(photo)
-              setImage(photo as string)
-            }
-          }}
-        />
-        <RecordVideoButton
-          isRecording={camera.current?.isRecording() || false}
-          onClick={() => {
-            if (camera.current) {
-              if (camera.current.isRecording()) {
-                camera.current.stopRecording().then(() => {
-                  const resultingVideo = camera.current ? camera.current.getRecordedVideo() : null
-                  console.log(resultingVideo)
-                  if (resultingVideo) {
-                    console.log(resultingVideo)
-                    setRecordedVideoUrl(URL.createObjectURL(resultingVideo))
-                  }
-                })
-              } else {
-                camera.current.startRecording()
-              }
-            }
-          }}
-        />
-        {camera.current?.torchSupported && (
-          <TorchButton
-            className={torchToggled ? 'toggled' : ''}
-            onClick={() => {
-              if (camera.current) {
-                setTorchToggled(camera.current.toggleTorch())
-              }
+          </FullScreenVideoPreview>
+        </>
+      ) : (
+        <>
+          <Camera
+            ref={camera}
+            aspectRatio="cover"
+            facingMode="environment"
+            numberOfCamerasCallback={(i) => setNumberOfCameras(i)}
+            videoSourceDeviceId={activeDeviceId}
+            errorMessages={{
+              noCameraAccessible: 'No camera device accessible. Please connect your camera or try a different browser.',
+              permissionDenied: 'Permission denied. Please refresh and give camera permission.',
+              switchCamera:
+                'It is not possible to switch camera to different one because there is only one video device accessible.',
+              canvas: 'Canvas is not supported.',
+              mediaRecorderNotSupported: 'MediaRecorder is not supported.',
+            }}
+            videoReadyCallback={() => {
+              console.log('Video feed ready.')
             }}
           />
-        )}
-        <ChangeFacingCameraButton
-          disabled={numberOfCameras <= 1}
-          onClick={() => {
-            if (camera.current) {
-              const result = camera.current.switchCamera()
-              console.log(result)
-            }
-          }}
-        />
-      </Control>
+          <Control>
+            <DeviceSelect
+              onChange={(event) => {
+                setActiveDeviceId(event.target.value)
+              }}
+            >
+              {devices.map((d) => (
+                <option key={d.deviceId} value={d.deviceId}>
+                  {d.label}
+                </option>
+              ))}
+            </DeviceSelect>
+            {image && (
+              <ImagePreview
+                image={image}
+                onClick={() => {
+                  setShowImage(!showImage)
+                }}
+              />
+            )}
+            {recordedVideoUrl && (
+              <VideoPreview
+                onClick={() => {
+                  setShowVideo(!showVideo)
+                }}
+              >
+                <source src={recordedVideoUrl} type="video/webm" />
+                Your browser does not support the video tag.
+              </VideoPreview>
+            )}
+            <TakePhotoButton
+              onClick={() => {
+                if (camera.current) {
+                  const photo = camera.current.takePhoto()
+                  console.log(photo)
+                  setRecordedVideoUrl(null)
+                  setImage(photo as string)
+                }
+              }}
+            />
+            <RecordVideoButton
+              isRecording={camera.current?.isRecording() || false}
+              onClick={() => {
+                if (camera.current) {
+                  if (camera.current.isRecording()) {
+                    camera.current.stopRecording().then(() => {
+                      const resultingVideo = camera.current ? camera.current.getRecordedVideo() : null
+                      console.log(resultingVideo)
+                      if (resultingVideo) {
+                        console.log(resultingVideo)
+                        setImage(null)
+                        setRecordedVideoUrl(null)
+                        setRecordedVideoUrl(URL.createObjectURL(resultingVideo))
+                      }
+                    })
+                  } else {
+                    camera.current.startRecording()
+                  }
+                }
+              }}
+            />
+            {camera.current?.torchSupported && (
+              <TorchButton
+                className={torchToggled ? 'toggled' : ''}
+                onClick={() => {
+                  if (camera.current) {
+                    setTorchToggled(camera.current.toggleTorch())
+                  }
+                }}
+              />
+            )}
+            <ChangeFacingCameraButton
+              disabled={numberOfCameras <= 1}
+              onClick={() => {
+                if (camera.current) {
+                  const result = camera.current.switchCamera()
+                  console.log(result)
+                }
+              }}
+            />
+          </Control>
+        </>
+      )}
     </Wrapper>
   )
 }

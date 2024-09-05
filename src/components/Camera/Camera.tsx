@@ -170,8 +170,8 @@ const CameraComponent: ForwardRefRenderFunction<CameraRef, CameraProps> = (
       return new Promise((resolve) => {
         if (mediaRecorder.current && isRecording) {
           mediaRecorder.current.stop()
-          setIsRecording(false)
           mediaRecorder.current.onstop = () => {
+            setIsRecording(false)
             resolve()
           }
         }

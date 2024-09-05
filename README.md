@@ -27,6 +27,7 @@ Note: WebRTC is only supported on secure connections. So you need to serve it fr
 - controlled by react [Ref](https://reactjs.org/docs/refs-and-the-dom.html)
 - public functions to take photo, to switch camera and to get number of cameras
 - typescript library
+- video recording supported (in progress, see usage in example app)
 
 ## Installation
 

@@ -183,22 +183,21 @@ const FullScreenVideoPreview = styled.video`
   height: 100%;
   z-index: 100;
   position: absolute;
+  background-color: black;
 `
 
 const CloseIcon = styled.div`
+  background: url(https://img.icons8.com/ios/50/000000/cancel.png);
+  background-color: rgba(255, 255, 255, 0.8);
+  background-position: center;
+  background-size: 42px;
+  background-repeat: no-repeat;
   position: absolute;
+  width: 42px;
+  height: 42px;
   right: 20px;
   top: 20px;
-  color: white;
-  font-size: 24px;
   cursor: pointer;
-  width: 36px;
-  height: 36px;
-  background: gray;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 1000;
 `
 
@@ -237,117 +236,113 @@ const App = () => {
             onClick={() => {
               setShowVideo(!showVideo)
             }}
-          >
-            X
-          </CloseIcon>
-          <FullScreenVideoPreview controls>
+          />
+          <FullScreenVideoPreview autoPlay controls>
             <source src={recordedVideoUrl} type="video/webm" />
             Your browser does not support the video tag.
           </FullScreenVideoPreview>
         </>
       ) : (
-        <>
-          <Camera
-            ref={camera}
-            aspectRatio="cover"
-            facingMode="environment"
-            numberOfCamerasCallback={(i) => setNumberOfCameras(i)}
-            videoSourceDeviceId={activeDeviceId}
-            errorMessages={{
-              noCameraAccessible: 'No camera device accessible. Please connect your camera or try a different browser.',
-              permissionDenied: 'Permission denied. Please refresh and give camera permission.',
-              switchCamera:
-                'It is not possible to switch camera to different one because there is only one video device accessible.',
-              canvas: 'Canvas is not supported.',
-              mediaRecorderNotSupported: 'MediaRecorder is not supported.',
+        <Control>
+          <DeviceSelect
+            onChange={(event) => {
+              setActiveDeviceId(event.target.value)
             }}
-            videoReadyCallback={() => {
-              console.log('Video feed ready.')
-            }}
-          />
-          <Control>
-            <DeviceSelect
-              onChange={(event) => {
-                setActiveDeviceId(event.target.value)
+          >
+            {devices.map((d) => (
+              <option key={d.deviceId} value={d.deviceId}>
+                {d.label}
+              </option>
+            ))}
+          </DeviceSelect>
+          {image && (
+            <ImagePreview
+              image={image}
+              onClick={() => {
+                setShowImage(!showImage)
+              }}
+            />
+          )}
+          {recordedVideoUrl && (
+            <VideoPreview
+              onClick={() => {
+                setShowVideo(!showVideo)
               }}
             >
-              {devices.map((d) => (
-                <option key={d.deviceId} value={d.deviceId}>
-                  {d.label}
-                </option>
-              ))}
-            </DeviceSelect>
-            {image && (
-              <ImagePreview
-                image={image}
-                onClick={() => {
-                  setShowImage(!showImage)
-                }}
-              />
-            )}
-            {recordedVideoUrl && (
-              <VideoPreview
-                onClick={() => {
-                  setShowVideo(!showVideo)
-                }}
-              >
-                <source src={recordedVideoUrl} type="video/webm" />
-                Your browser does not support the video tag.
-              </VideoPreview>
-            )}
-            <TakePhotoButton
-              onClick={() => {
-                if (camera.current) {
-                  const photo = camera.current.takePhoto()
-                  console.log(photo)
-                  setRecordedVideoUrl(null)
-                  setImage(photo as string)
-                }
-              }}
-            />
-            <RecordVideoButton
-              isRecording={camera.current?.isRecording() || false}
-              onClick={() => {
-                if (camera.current) {
-                  if (camera.current.isRecording()) {
-                    camera.current.stopRecording().then(() => {
-                      const resultingVideo = camera.current ? camera.current.getRecordedVideo() : null
+              <source src={recordedVideoUrl} type="video/webm" />
+              Your browser does not support the video tag.
+            </VideoPreview>
+          )}
+          <TakePhotoButton
+            onClick={() => {
+              if (camera.current) {
+                const photo = camera.current.takePhoto()
+                console.log(photo)
+                setRecordedVideoUrl(null)
+                setImage(photo as string)
+              }
+            }}
+          />
+          <RecordVideoButton
+            isRecording={camera.current?.isRecording() || false}
+            onClick={() => {
+              if (camera.current) {
+                if (camera.current.isRecording()) {
+                  camera.current.stopRecording().then(() => {
+                    const resultingVideo = camera.current ? camera.current.getRecordedVideo() : null
+                    console.log(resultingVideo)
+                    if (resultingVideo) {
                       console.log(resultingVideo)
-                      if (resultingVideo) {
-                        console.log(resultingVideo)
-                        setImage(null)
-                        setRecordedVideoUrl(null)
-                        setRecordedVideoUrl(URL.createObjectURL(resultingVideo))
-                      }
-                    })
-                  } else {
-                    camera.current.startRecording()
-                  }
+                      setImage(null)
+                      setRecordedVideoUrl(null)
+                      setRecordedVideoUrl(URL.createObjectURL(resultingVideo))
+                    }
+                  })
+                } else {
+                  camera.current.startRecording()
                 }
-              }}
-            />
-            {camera.current?.torchSupported && (
-              <TorchButton
-                className={torchToggled ? 'toggled' : ''}
-                onClick={() => {
-                  if (camera.current) {
-                    setTorchToggled(camera.current.toggleTorch())
-                  }
-                }}
-              />
-            )}
-            <ChangeFacingCameraButton
-              disabled={numberOfCameras <= 1}
+              }
+            }}
+          />
+          {camera.current?.torchSupported && (
+            <TorchButton
+              className={torchToggled ? 'toggled' : ''}
               onClick={() => {
                 if (camera.current) {
-                  const result = camera.current.switchCamera()
-                  console.log(result)
+                  setTorchToggled(camera.current.toggleTorch())
                 }
               }}
             />
-          </Control>
-        </>
+          )}
+          <ChangeFacingCameraButton
+            disabled={numberOfCameras <= 1}
+            onClick={() => {
+              if (camera.current) {
+                const result = camera.current.switchCamera()
+                console.log(result)
+              }
+            }}
+          />
+        </Control>
       )}
+      <Camera
+        ref={camera}
+        aspectRatio="cover"
+        facingMode="environment"
+        numberOfCamerasCallback={(i) => setNumberOfCameras(i)}
+        videoSourceDeviceId={activeDeviceId}
+        errorMessages={{
+          noCameraAccessible: 'No camera device accessible. Please connect your camera or try a different browser.',
+          permissionDenied: 'Permission denied. Please refresh and give camera permission.',
+          switchCamera:
+            'It is not possible to switch camera to different one because there is only one video device accessible.',
+          canvas: 'Canvas is not supported.',
+          mediaRecorderNotSupported: 'MediaRecorder is not supported.',
+        }}
+        videoReadyCallback={() => {
+          console.log('Video feed ready.')
+        }}
+      />
     </Wrapper>
   )
 }
